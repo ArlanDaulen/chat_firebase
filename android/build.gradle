@@ -1,0 +1,26 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Переопределяем директорию сборки проекта
+def newBuildDir = layout.buildDirectory.dir("../../build").get().asFile
+layout.buildDirectory.set(newBuildDir)
+
+// Переопределяем директории сборки для всех подпроектов
+subprojects {
+    def subprojectBuildDir = new File(newBuildDir, project.name)
+    layout.buildDirectory.set(subprojectBuildDir)
+}
+
+// Обеспечиваем зависимость от оценки модуля ":app"
+subprojects {
+    evaluationDependsOn(":app")
+}
+
+// Регистрируем задачу clean
+tasks.register("clean", Delete) {
+    delete layout.buildDirectory
+}
