@@ -1,9 +1,11 @@
 import 'package:chat_firebase/core/c_colors.dart';
-import 'package:chat_firebase/feature/chat/chat_service.dart';
+import 'package:chat_firebase/core/injection/get_it_instance.dart';
+import 'package:chat_firebase/domain/entities/message_entity.dart';
+import 'package:chat_firebase/feature/chat/bloc/chat_bloc.dart';
 import 'package:chat_firebase/feature/common/widgets/c_text_field.dart';
 import 'package:chat_firebase/gen/assets.gen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -22,14 +24,17 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _chat = ChatService();
   final focusNode = FocusNode();
   final scrollController = ScrollController();
   final textController = TextEditingController();
+  final chatBloc = getIt<ChatBloc>();
 
   @override
   void initState() {
     super.initState();
+    chatBloc.add(
+      GetMessages(userId: widget.senderId, otherUserId: widget.receiverId),
+    );
     focusNode.addListener(() {
       if (focusNode.hasFocus) {
         Future.delayed(Duration(milliseconds: 500)).whenComplete(scrollDown);
@@ -55,31 +60,38 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.receiverEmail ?? ''),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
-          children: [
-            Expanded(
-              child: _Chat(
-                chat: _chat,
-                senderId: widget.senderId,
-                receiverId: widget.receiverId,
-                scrollController: scrollController,
+    return BlocProvider<ChatBloc>.value(
+      value: chatBloc,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.receiverEmail ?? ''),
+          centerTitle: true,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+          ).copyWith(bottom: 8),
+          child: Column(
+            children: [
+              Expanded(
+                child: _Chat(
+                  chatBloc: chatBloc,
+                  senderId: widget.senderId,
+                  receiverId: widget.receiverId,
+                  scrollController: scrollController,
+                ),
               ),
-            ),
-            _TextInput(
-              chat: _chat,
-              receiverId: widget.receiverId,
-              focusNode: focusNode,
-              controller: textController,
-              onSend: scrollDown,
-            ),
-          ],
+              SizedBox(height: 8),
+              _TextInput(
+                chatBloc: chatBloc,
+                receiverId: widget.receiverId,
+                senderId: widget.senderId,
+                focusNode: focusNode,
+                controller: textController,
+                onSend: scrollDown,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -88,38 +100,38 @@ class _ChatScreenState extends State<ChatScreen> {
 
 class _Chat extends StatelessWidget {
   const _Chat({
-    required this.chat,
+    required this.chatBloc,
     required this.senderId,
     required this.receiverId,
     required this.scrollController,
   });
-  final ChatService chat;
+  final ChatBloc chatBloc;
   final String senderId;
   final String receiverId;
   final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: chat.getMessages(senderId, receiverId),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Ошибка загрузки сообщений: ${snapshot.error}'),
-          );
+    return BlocConsumer<ChatBloc, ChatState>(
+      listener: (context, state) {
+        if (state is ChatFailure) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Ошибка: ${state.message}')));
         }
-        if (snapshot.connectionState == ConnectionState.waiting) {
+      },
+      builder: (context, state) {
+        if (state is ChatLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('Нет сообщений'));
+        if (state is ChatLoaded) {
+          return _LoadedChat(
+            messages: state.messages,
+            senderId: senderId,
+            scrollController: scrollController,
+          );
         }
-
-        return _LoadedChat(
-          messages: snapshot.data!.docs,
-          senderId: senderId,
-          scrollController: scrollController,
-        );
+        return const Center(child: Text('Нет сообщений'));
       },
     );
   }
@@ -131,7 +143,7 @@ class _LoadedChat extends StatelessWidget {
     required this.senderId,
     required this.scrollController,
   });
-  final List<QueryDocumentSnapshot<Object?>> messages;
+  final List<MessageEntity> messages;
   final String? senderId;
   final ScrollController scrollController;
 
@@ -142,7 +154,7 @@ class _LoadedChat extends StatelessWidget {
       itemCount: messages.length,
       separatorBuilder: (context, index) => SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final message = messages[index].data() as Map<String, dynamic>;
+        final message = messages[index];
         return Align(
           alignment:
               isSender(message) ? Alignment.centerRight : Alignment.centerLeft,
@@ -162,12 +174,12 @@ class _LoadedChat extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  message['message'] ?? '',
+                  message.message,
                   style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
                 SizedBox(width: 8),
                 Text(
-                  DateFormat.Hm().format(DateTime.parse(message['timestamp'])),
+                  DateFormat.Hm().format(message.timestamp),
                   style: TextStyle(fontSize: 8, color: CColors.grey),
                 ),
               ],
@@ -178,21 +190,23 @@ class _LoadedChat extends StatelessWidget {
     );
   }
 
-  bool isSender(Map<String, dynamic> message) {
-    return senderId == message['sender_id'];
+  bool isSender(MessageEntity message) {
+    return senderId == message.senderId;
   }
 }
 
 class _TextInput extends StatelessWidget {
   const _TextInput({
-    required this.chat,
+    required this.chatBloc,
     required this.receiverId,
+    required this.senderId,
     required this.focusNode,
     required this.controller,
     required this.onSend,
   });
-  final ChatService chat;
+  final ChatBloc chatBloc;
   final String receiverId;
+  final String senderId;
   final FocusNode focusNode;
   final TextEditingController controller;
   final VoidCallback onSend;
@@ -227,21 +241,17 @@ class _TextInput extends StatelessWidget {
     );
   }
 
-  void _sendMessage(BuildContext context) async {
+  void _sendMessage(BuildContext context) {
     if (controller.text.isEmpty) return;
-    try {
-      await chat.sendMessage(
-        receiverId: receiverId,
-        message: controller.text.trim(),
-      );
-      controller.clear();
-      onSend();
-    } catch (e) {
-      showDialog(
-        // ignore: use_build_context_synchronously
-        context: context,
-        builder: (context) => AlertDialog(content: Text('Ошибка отправки: $e')),
-      );
-    }
+    chatBloc.add(
+      SendMessage(
+        message: MessageEntity(
+          senderId: senderId,
+          receiverId: receiverId,
+          message: controller.text,
+          timestamp: DateTime.now(),
+        ),
+      ),
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:chat_firebase/core/c_colors.dart';
-import 'package:chat_firebase/feature/auth/auth_screen.dart';
+import 'package:chat_firebase/core/injection/configurator.dart';
+import 'package:chat_firebase/feature/auth/auth_gate.dart';
 import 'package:chat_firebase/firebase_messaging_service.dart';
 import 'package:chat_firebase/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,6 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FirebaseMessagingService().init();
+  await configureDependencies();
   runApp(const MyApp());
 }
 
@@ -65,7 +67,7 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: AuthScreen(),
+      home: AuthGate(),
     );
   }
 }

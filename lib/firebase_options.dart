@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCODuMz_yYG-FkDxVhTTuWfD3rodjEB_Tc',
-    appId: '1:104811704975:android:7fb211fd516dbb72a676fa',
+    appId: '1:104811704975:android:7f4c66e755130683a676fa',
     messagingSenderId: '104811704975',
     projectId: 'chat-d40ae',
     storageBucket: 'chat-d40ae.firebasestorage.app',
@@ -59,10 +59,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCvQoaVtjWpYfq5yczNfJ9IYJVgNdgcaI4',
-    appId: '1:104811704975:ios:9a032a0a8fabf369a676fa',
+    appId: '1:104811704975:ios:2d8f6f74de597a83a676fa',
     messagingSenderId: '104811704975',
     projectId: 'chat-d40ae',
     storageBucket: 'chat-d40ae.firebasestorage.app',
-    iosBundleId: 'com.example.chat',
+    iosBundleId: 'com.example.chatFirebase',
   );
+
 }

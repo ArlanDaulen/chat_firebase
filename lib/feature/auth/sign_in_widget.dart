@@ -1,4 +1,5 @@
-import 'package:chat_firebase/feature/auth/auth_service.dart';
+import 'package:chat_firebase/core/injection/get_it_instance.dart';
+import 'package:chat_firebase/feature/auth/bloc/auth_bloc.dart';
 import 'package:chat_firebase/feature/common/widgets/c_text_field.dart';
 import 'package:flutter/material.dart';
 
@@ -24,28 +25,17 @@ class SignInWidet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => _signIn(context),
+            onPressed:
+                () => getIt<AuthBloc>().add(
+                  SignIn(
+                    email: _emailController.text,
+                    password: _passwordController.text,
+                  ),
+                ),
             child: Text('Войти'),
           ),
         ],
       ),
     );
-  }
-
-  void _signIn(BuildContext context) async {
-    try {
-      final auth = AuthService();
-      await auth.signIn(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-    } catch (e) {
-      showDialog(
-        // ignore: use_build_context_synchronously
-        context: context,
-        builder:
-            (context) => AlertDialog(content: Text('Ошибка авторизации: $e')),
-      );
-    }
   }
 }

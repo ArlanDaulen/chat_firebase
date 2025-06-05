@@ -1,4 +1,5 @@
-import 'package:chat_firebase/feature/auth/auth_service.dart';
+import 'package:chat_firebase/core/injection/get_it_instance.dart';
+import 'package:chat_firebase/feature/auth/bloc/auth_bloc.dart';
 import 'package:chat_firebase/feature/common/widgets/c_text_field.dart';
 import 'package:flutter/material.dart';
 
@@ -39,26 +40,17 @@ class SignUpWidget extends StatelessWidget {
     );
   }
 
-  void _signUp(BuildContext context) async {
+  void _signUp(BuildContext context) {
     if (_passwordController.text != _confirmPasswordController.text) {
       showDialog(
-        // ignore: use_build_context_synchronously
         context: context,
         builder:
             (context) => AlertDialog(content: Text('Пароли не совпадают!')),
       );
       return;
     }
-    try {
-      final auth = AuthService();
-      await auth.signUp(_emailController.text, _passwordController.text);
-    } catch (e) {
-      showDialog(
-        // ignore: use_build_context_synchronously
-        context: context,
-        builder:
-            (context) => AlertDialog(content: Text('Ошибка регистрации: $e')),
-      );
-    }
+    getIt<AuthBloc>().add(
+      SignUp(email: _emailController.text, password: _passwordController.text),
+    );
   }
 }
