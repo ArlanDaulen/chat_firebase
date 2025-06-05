@@ -35,6 +35,7 @@ class _ChatScreenState extends State<ChatScreen> {
     chatBloc.add(
       GetMessages(userId: widget.senderId, otherUserId: widget.receiverId),
     );
+    Future.delayed(Duration(milliseconds: 500)).whenComplete(scrollDown);
     focusNode.addListener(() {
       if (focusNode.hasFocus) {
         Future.delayed(Duration(milliseconds: 500)).whenComplete(scrollDown);
@@ -44,7 +45,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void scrollDown() {
     scrollController.animateTo(
-      scrollController.position.maxScrollExtent,
+      scrollController.position.maxScrollExtent + 100,
       duration: Duration(milliseconds: 500),
       curve: Curves.fastOutSlowIn,
     );
@@ -242,7 +243,13 @@ class _TextInput extends StatelessWidget {
   }
 
   void _sendMessage(BuildContext context) {
-    if (controller.text.isEmpty) return;
+    if (controller.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Введите сообщение')));
+      return;
+    }
+
     chatBloc.add(
       SendMessage(
         message: MessageEntity(
@@ -253,5 +260,7 @@ class _TextInput extends StatelessWidget {
         ),
       ),
     );
+    controller.clear();
+    onSend();
   }
 }

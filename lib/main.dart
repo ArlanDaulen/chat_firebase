@@ -3,6 +3,7 @@ import 'package:chat_firebase/core/injection/configurator.dart';
 import 'package:chat_firebase/feature/auth/auth_gate.dart';
 import 'package:chat_firebase/firebase_messaging_service.dart';
 import 'package:chat_firebase/firebase_options.dart';
+import 'package:chat_firebase/local_notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FirebaseMessagingService().init();
   await configureDependencies();
+  await LocalNotificationService().initialize();
   runApp(const MyApp());
 }
 
